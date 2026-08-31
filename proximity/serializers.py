@@ -115,3 +115,11 @@ class LocationShareCreateSerializer(serializers.Serializer):
                 "Expiry must be in the future."
             )
         return value
+
+class LocationUpdateSerializer(serializers.Serializer):
+    latitude = serializers.FloatField(min_value=-90, max_value=90)
+    longitude = serializers.FloatField(min_value=-180, max_value=180)
+    accuracy_m = serializers.FloatField(required=False, allow_null=True)
+    battery_pct = serializers.IntegerField(
+        required=False, allow_null=True, min_value=0, max_value=100
+    )

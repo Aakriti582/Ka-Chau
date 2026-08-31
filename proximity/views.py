@@ -1,13 +1,25 @@
+from datetime import timedelta
+
+from django.contrib.gis.db.models.functions import Distance
+from django.contrib.gis.geos import Point
+from django.contrib.gis.measure import D
+from django.db import transaction
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from django.db import transaction
 
-from .models import Friendship, LocationShare
-from .serializers import FriendshipSerializer, FriendRequestCreateSerializer, LocationShareSerializer,LocationShareCreateSerializer
-
+from .models import Friendship, LastKnownLocation, LocationShare
+from .serializers import (
+    FriendshipSerializer,
+    FriendRequestCreateSerializer,
+    LocationShareSerializer,
+    LocationShareCreateSerializer,
+    LocationUpdateSerializer,
+    UserMiniSerializer,
+)
 
 class FriendshipViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -62,8 +74,7 @@ class FriendshipViewSet(viewsets.ModelViewSet):
         friendship.save(update_fields=["status"])
         return Response(FriendshipSerializer(friendship).data)
 
-    @action(detail=True, methods=["post"]
-                )
+    @action(detail=True, methods=["post"])
     def reject(self, request, pk=None):
         friendship = self.get_object()
 
@@ -149,3 +160,129 @@ class LocationShareViewSet(viewsets.ModelViewSet):
         share.is_paused = False
         share.save(update_fields=["is_paused"])
         return Response(LocationShareSerializer(share).data)
+
+
+class LocationViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request):
+        serializer = LocationUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        point = Point(
+            data["longitude"], data["latitude"], srid=4326
+        )
+
+        LastKnownLocation.objects.update_or_create(
+            user=request.user,
+            defaults={
+                "point": point,
+                "accuracy_m": data.get("accuracy_m"),
+                "battery_pct": data.get("battery_pct"),
+            },
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+NEARBY_RADIUS_KM = 2
+FRESHNESS_MINUTES = 15
+
+
+class NearbyViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request):
+        me = request.user
+
+        try:
+            my_location = LastKnownLocation.objects.get(user=me)
+        except LastKnownLocation.DoesNotExist:
+            return Response(
+                {"detail": "Your location is unknown. Send a location update first."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        cutoff = timezone.now() - timedelta(minutes=FRESHNESS_MINUTES)
+
+        shares = (LocationShare.objects
+            .filter(viewer=me, is_paused=False)
+            .filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
+            .select_related("owner"))
+
+        precision_by_owner = {s.owner_id: s.precision for s in shares}
+        all_locations = {
+            loc.user_id: loc
+            for loc in LastKnownLocation.objects.filter(
+                user_id__in=precision_by_owner.keys()
+            )
+        }
+
+        locations = (LastKnownLocation.objects
+            .filter(user_id__in=precision_by_owner.keys())
+            .filter(point__distance_lte=(my_location.point, D(km=NEARBY_RADIUS_KM)))
+            .filter(updated_at__gte=cutoff)
+            .annotate(dist=Distance("point", my_location.point))
+            .select_related("user")
+            .order_by("dist"))
+
+        results = []
+        for loc in locations:
+            precision = precision_by_owner[loc.user_id]
+            entry = {
+                "user": UserMiniSerializer(loc.user).data,
+                "updated_at": loc.updated_at,
+                "precision": precision,
+            }
+
+            if precision == LocationShare.Precision.EXACT:
+                entry["latitude"] = loc.point.y
+                entry["longitude"] = loc.point.x
+                entry["distance_m"] = round(loc.dist.m)
+            elif precision == LocationShare.Precision.APPROX:
+                entry["distance_m"] = round(loc.dist.m, -2)
+            else:
+                entry["nearby"] = True
+                entry["distance_bucket"] = (
+                    "under_500m" if loc.dist.m < 500
+                    else "under_1km" if loc.dist.m < 1000
+                    else "under_2km"
+                )
+
+            results.append(entry)
+
+        nearby_ids = {loc.user_id for loc in locations}
+
+        stale = []
+        for share in shares:
+            if share.owner_id in nearby_ids:
+                continue
+
+            owner_loc = all_locations.get(share.owner_id)
+            if owner_loc is None:
+                stale.append({
+                    "user": UserMiniSerializer(share.owner).data,
+                    "reason": "never_shared_location",
+                    "updated_at": None,
+                })
+            elif owner_loc.updated_at < cutoff:
+                stale.append({
+                    "user": UserMiniSerializer(share.owner).data,
+                    "reason": "stale",
+                    "updated_at": owner_loc.updated_at,
+                })
+
+        paused_count = LocationShare.objects.filter(
+            viewer=me, is_paused=True
+        ).count()
+
+        return Response({
+            "nearby": results,
+            "stale": stale,
+            "counts": {
+                "sharing_with_me": len(precision_by_owner),
+                "nearby": len(results),
+                "stale": len(stale),
+                "paused": paused_count,
+            },
+        })
