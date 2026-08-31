@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from django.db import transaction
 
 from .models import Friendship, LocationShare
-from .serializers import FriendshipSerializer, FriendRequestCreateSerializer
+from .serializers import FriendshipSerializer, FriendRequestCreateSerializer, LocationShareSerializer,LocationShareCreateSerializer
 
 
 class FriendshipViewSet(viewsets.ModelViewSet):
@@ -100,3 +100,52 @@ class FriendshipViewSet(viewsets.ModelViewSet):
             friendship.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+class LocationShareViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = LocationShareSerializer
+    http_method_names = ["get", "post", "patch", "delete"]
+
+    def get_queryset(self):
+        user = self.request.user
+        return (LocationShare.objects
+                .filter(owner=user)
+                .select_related("owner", "viewer"))
+
+    def create(self, request):
+        serializer = LocationShareCreateSerializer(
+            data=request.data, context={"request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+
+        share = LocationShare.objects.create(
+            owner=request.user,
+            viewer=serializer.target,
+            precision=serializer.validated_data["precision"],
+            expires_at=serializer.validated_data.get("expires_at"),
+        )
+        return Response(
+            LocationShareSerializer(share).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(detail=False, methods=["get"])
+    def shared_with_me(self, request):
+        qs = (LocationShare.objects
+              .filter(viewer=request.user)
+              .select_related("owner", "viewer"))
+        return Response(LocationShareSerializer(qs, many=True).data)
+
+    @action(detail=True, methods=["post"])
+    def pause(self, request, pk=None):
+        share = self.get_object()
+        share.is_paused = True
+        share.save(update_fields=["is_paused"])
+        return Response(LocationShareSerializer(share).data)
+
+    @action(detail=True, methods=["post"])
+    def resume(self, request, pk=None):
+        share = self.get_object()
+        share.is_paused = False
+        share.save(update_fields=["is_paused"])
+        return Response(LocationShareSerializer(share).data)
