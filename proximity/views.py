@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.contrib.auth import get_user_model
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import D
@@ -20,6 +21,9 @@ from .serializers import (
     LocationUpdateSerializer,
     UserMiniSerializer,
 )
+
+User = get_user_model()
+
 
 class FriendshipViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -111,6 +115,48 @@ class FriendshipViewSet(viewsets.ModelViewSet):
             friendship.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=["get"])
+    def friends(self, request):
+        me = request.user
+        accepted = self.get_queryset().filter(status=Friendship.Status.ACCEPTED)
+        shares = {s.viewer_id: s for s in LocationShare.objects.filter(owner=me)}
+
+        out = []
+        for f in accepted:
+            other = f.to_user if f.from_user_id == me.id else f.from_user
+            share = shares.get(other.id)
+            out.append({
+                "friendship_id": f.id,
+                "user": UserMiniSerializer(other).data,
+                "my_share": LocationShareSerializer(share).data if share else None,
+            })
+        return Response(out)
+
+    @action(detail=False, methods=["get"])
+    def find(self, request):
+        username = request.query_params.get("username", "").strip()
+        if not username:
+            return Response(
+                {"detail": "username required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = User.objects.filter(username__iexact=username).first()
+        if user is None or user == request.user:
+            return Response({"found": False})
+
+        existing = Friendship.objects.filter(
+            from_user__in=[request.user, user],
+            to_user__in=[request.user, user],
+        ).first()
+
+        return Response({
+            "found": True,
+            "user": UserMiniSerializer(user).data,
+            "existing_status": existing.status if existing else None,
+        })
+
 
 class LocationShareViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
