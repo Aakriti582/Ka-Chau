@@ -7,3 +7,5 @@ __pycache__/
 check.pytokens.sh
 tokens.sh
 check.py
+node_modules/
+**/node_modules/
