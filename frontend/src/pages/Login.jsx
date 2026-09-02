@@ -27,26 +27,34 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-page font-body px-4">
       <form
         onSubmit={submit}
-        className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-slate-200 p-8"
+        className="w-full max-w-sm bg-card rounded-[22px] shadow-sm border border-border p-8"
       >
-        <h1 className="text-3xl font-semibold text-slate-900">Ka Chau?</h1>
-        <p className="text-slate-500 mt-1 mb-6">See which friends are nearby.</p>
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 mx-auto mb-4 rounded-full border border-sage flex items-center justify-center">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2A3D2E" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+          </div>
+          <h1 className="font-display font-medium text-4xl text-forest">Ka Chau?</h1>
+          <p className="mt-1.5 text-sm text-ink-soft italic">See which friends are nearby.</p>
+        </div>
 
-        <label className="block text-sm font-medium text-slate-700 mb-1">
+        <label className="block text-xs tracking-[.1em] uppercase text-ink-soft mb-1.5">
           Username
         </label>
         <input
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           autoComplete="username"
-          className="w-full border border-slate-300 rounded-lg px-3 py-2 mb-4
-                     focus:outline-none focus:ring-2 focus:ring-slate-900"
+          className="w-full font-body text-base text-ink border border-border rounded-[14px] px-4 py-3.5 mb-4
+                     outline-none focus:border-sage"
         />
 
-        <label className="block text-sm font-medium text-slate-700 mb-1">
+        <label className="block text-xs tracking-[.1em] uppercase text-ink-soft mb-1.5">
           Password
         </label>
         <input
@@ -54,22 +62,32 @@ export default function Login() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="current-password"
-          className="w-full border border-slate-300 rounded-lg px-3 py-2 mb-6
-                     focus:outline-none focus:ring-2 focus:ring-slate-900"
+          className="w-full font-body text-base text-ink border border-border rounded-[14px] px-4 py-3.5 mb-6
+                     outline-none focus:border-sage"
         />
 
         {error && (
-          <p className="text-sm text-red-600 mb-4">{error}</p>
+          <p className="text-sm text-danger mb-4">{error}</p>
         )}
 
         <button
           type="submit"
           disabled={busy || !username || !password}
-          className="w-full bg-slate-900 text-white rounded-lg py-2.5 font-medium
-                     disabled:opacity-40 hover:bg-slate-800 transition"
+          className="w-full bg-forest text-white rounded-2xl py-3.5 font-body text-base
+                     disabled:opacity-40 hover:bg-forest-dark transition"
         >
           {busy ? "Signing in…" : "Sign in"}
         </button>
+
+        <div className="mt-5 flex gap-2.5 items-start px-4 py-3.5 border border-border rounded-[14px]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7CA982" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+          </svg>
+          <p className="text-xs leading-relaxed text-ink-soft text-balance">
+            Nothing is shared until you choose to. New shares default to <em>proximity only</em> — no
+            coordinates, ever.
+          </p>
+        </div>
       </form>
     </div>
   );

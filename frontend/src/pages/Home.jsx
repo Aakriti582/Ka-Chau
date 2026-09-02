@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import client, { tokens } from "../api/client";
 import useLocationReporter from "../hooks/useLocationReporter";
 import FriendRow from "../components/FriendRow";
+import BottomTabBar from "../components/BottomTabBar";
 import { timeAgo } from "../utils/time";
 
 const POLL_MS = 30_000;
@@ -42,49 +43,60 @@ export default function Home() {
   const counts = data?.counts;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-lg mx-auto px-4 py-6">
-        <header className="flex justify-between items-center mb-1">
-          <h1 className="text-2xl font-semibold text-slate-900">Ka Chau?</h1>
+    <div className="min-h-screen bg-page font-body pb-24">
+      <div className="max-w-lg mx-auto px-5 py-6">
+        <header className="flex justify-between items-center mb-4">
+          <h1 className="font-display font-medium text-3xl text-ink">Nearby</h1>
           <button
             onClick={() => { tokens.clear(); window.location.href = "/login"; }}
-            className="text-sm text-slate-500 hover:text-slate-900"
+            className="text-sm text-ink-soft hover:text-forest"
           >
             Sign out
           </button>
         </header>
 
-        <p className="text-xs text-slate-400 mb-6">
-          {status === "denied"
-            ? "Location off — others can't see you"
-            : lastSent
-            ? `Your location updated ${timeAgo(lastSent.toISOString())}`
-            : "Getting your location…"}
-        </p>
+        <div
+          className={`flex items-center gap-2.5 rounded-[18px] border px-4 py-3.5 mb-4 ${
+            status === "denied" ? "border-border bg-card" : "border-[#c6dcc9] bg-[#f1f6f1]"
+          }`}
+        >
+          <span
+            className={`w-[9px] h-[9px] rounded-full shrink-0 ${
+              status === "denied" ? "bg-ink-faint" : "bg-sage"
+            }`}
+          />
+          <span className={`text-sm ${status === "denied" ? "text-ink-soft" : "text-forest"}`}>
+            {status === "denied"
+              ? "Location off — others can't see you"
+              : lastSent
+              ? `Your location updated ${timeAgo(lastSent.toISOString())}`
+              : "Getting your location…"}
+          </span>
+        </div>
 
         {locError && (
-          <div className="bg-amber-50 border border-amber-200 text-amber-800
-                          text-sm rounded-lg px-3 py-2 mb-4">
+          <div className="bg-amber-bg border border-amber-border text-amber-ink
+                          text-sm rounded-2xl px-4 py-3 mb-4">
             {locError}
           </div>
         )}
 
         {error && (
-          <div className="bg-white border border-slate-200 rounded-xl
+          <div className="bg-card border border-border rounded-2xl
                           px-4 py-6 text-center">
-            <p className="text-slate-600 text-sm">{error}</p>
+            <p className="text-ink-soft text-sm">{error}</p>
           </div>
         )}
 
         {loading && !data && (
-          <p className="text-slate-400 text-sm">Loading…</p>
+          <p className="text-ink-soft text-sm">Loading…</p>
         )}
 
         {data && (
           <>
             {data.nearby.length > 0 && (
-              <section className="bg-white rounded-xl border border-slate-200
-                                  px-4 divide-y divide-slate-100 mb-4">
+              <section className="bg-card rounded-[20px] border border-border
+                                  px-4 divide-y divide-[#eff1ef] mb-4">
                 {data.nearby.map((f) => (
                   <FriendRow key={f.user.id} friend={f} />
                 ))}
@@ -92,16 +104,16 @@ export default function Home() {
             )}
 
             {data.nearby.length === 0 && (
-              <div className="bg-white border border-slate-200 rounded-xl
+              <div className="bg-card border border-border rounded-2xl
                               px-4 py-8 text-center mb-4">
-                <p className="text-slate-900 font-medium mb-1">
+                <p className="font-display text-xl text-ink mb-1">
                   {counts.sharing_with_me === 0
                     ? counts.paused > 0
                       ? "Sharing is paused"
                       : "Nobody is sharing with you"
                     : "No one nearby"}
                 </p>
-                <p className="text-slate-500 text-sm">
+                <p className="text-ink-soft text-sm">
                   {counts.sharing_with_me === 0
                     ? counts.paused > 0
                       ? `${counts.paused} friend${counts.paused > 1 ? "s have" : " has"} paused sharing.`
@@ -113,12 +125,12 @@ export default function Home() {
 
             {data.stale.length > 0 && (
               <section>
-                <h2 className="text-xs font-medium text-slate-400 uppercase
-                               tracking-wide mb-2 px-1">
+                <h2 className="text-[11px] font-medium text-ink-soft uppercase
+                               tracking-[.14em] mb-2 px-1">
                   Not updating
                 </h2>
-                <div className="bg-white rounded-xl border border-slate-200
-                                px-4 divide-y divide-slate-100">
+                <div className="bg-card rounded-[20px] border border-border
+                                px-4 divide-y divide-[#eff1ef]">
                   {data.stale.map((f) => (
                     <FriendRow key={f.user.id} friend={f} stale />
                   ))}
@@ -128,6 +140,7 @@ export default function Home() {
           </>
         )}
       </div>
+      <BottomTabBar />
     </div>
   );
 }
