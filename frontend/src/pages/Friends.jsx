@@ -97,22 +97,108 @@ function RequestRow({ request, onAccept, onReject, busy }) {
   );
 }
 
-function RequestsPanel({ requests, error, onAccept, onReject, busyId }) {
-  if (error) return <p className="text-ink-soft text-sm text-center py-8">{error}</p>;
-  if (!requests) return <p className="text-ink-soft text-sm">Loading…</p>;
-  if (requests.length === 0) {
-    return <p className="text-ink-soft text-sm text-center py-8">No pending requests.</p>;
-  }
+function SentRequestRow({ request, onCancel, busy }) {
+  const name = request.to_user.display_name || request.to_user.username;
+
   return (
-    <div className="flex flex-col gap-3">
-      {requests.map((r) => (
-        <RequestRow key={r.id} request={r} onAccept={onAccept} onReject={onReject} busy={busyId === r.id} />
-      ))}
+    <div className="flex items-center gap-3 bg-card border border-border rounded-[18px] px-4 py-3.5">
+      <div className="w-11 h-11 rounded-full bg-sage text-white flex items-center justify-center font-display text-lg shrink-0">
+        {initials(name)}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-base text-ink">{name}</div>
+        <div className="text-[12.5px] text-ink-soft mt-0.5">
+          @{request.to_user.username} · sent {timeAgo(request.created_at)}
+        </div>
+      </div>
+      <button
+        onClick={() => onCancel(request)}
+        disabled={busy}
+        className="text-[12.5px] text-ink-soft bg-card border border-border rounded-xl px-3.5 py-2 shrink-0 disabled:opacity-50"
+      >
+        Cancel
+      </button>
     </div>
   );
 }
 
-function AddPanel() {
+function RequestSection({ title, className = "", items, error, emptyText, note, children }) {
+  return (
+    <section className={className}>
+      <div className="text-[11px] tracking-[.14em] uppercase text-ink-soft mb-2.5">{title}</div>
+
+      {error && <p className="text-sm text-danger mb-2.5">{error}</p>}
+      {items?.length === 0 && <p className="text-[12.5px] text-ink-faint">{emptyText}</p>}
+
+      {items?.length > 0 && (
+        <>
+          {children}
+          {note && <p className="mt-2.5 text-[11.5px] text-ink-faint text-balance">{note}</p>}
+        </>
+      )}
+    </section>
+  );
+}
+
+function RequestsPanel({
+  incoming,
+  incomingError,
+  sent,
+  sentError,
+  onAccept,
+  onReject,
+  onCancel,
+  busyId,
+}) {
+  // Hold the single "Loading…" until both lists have settled, so neither
+  // section renders an empty state while the other is still in flight.
+  if ((!incoming && !incomingError) || (!sent && !sentError)) {
+    return <p className="text-ink-soft text-sm">Loading…</p>;
+  }
+  if (!incomingError && !sentError && incoming?.length === 0 && sent?.length === 0) {
+    return <p className="text-ink-soft text-sm text-center py-8">No pending requests.</p>;
+  }
+
+  return (
+    <div>
+      <RequestSection
+        title="Incoming"
+        items={incoming}
+        error={incomingError}
+        emptyText="Nothing is waiting on you right now."
+      >
+        <div className="flex flex-col gap-3">
+          {incoming?.map((r) => (
+            <RequestRow
+              key={r.id}
+              request={r}
+              onAccept={onAccept}
+              onReject={onReject}
+              busy={busyId === r.id}
+            />
+          ))}
+        </div>
+      </RequestSection>
+
+      <RequestSection
+        className="mt-6 pt-5 border-t border-border"
+        title="Sent"
+        items={sent}
+        error={sentError}
+        emptyText="You haven't sent any requests."
+        note="Cancelling withdraws the request — you can always send a new one later."
+      >
+        <div className="flex flex-col gap-2.5">
+          {sent?.map((r) => (
+            <SentRequestRow key={r.id} request={r} onCancel={onCancel} busy={busyId === r.id} />
+          ))}
+        </div>
+      </RequestSection>
+    </div>
+  );
+}
+
+function AddPanel({ onSent }) {
   const [username, setUsername] = useState("");
   const [result, setResult] = useState(null);
   const [searched, setSearched] = useState(false);
@@ -142,6 +228,7 @@ function AddPanel() {
     try {
       await client.post("/friendships/", { username: result.user.username });
       setResult((r) => ({ ...r, existing_status: "pending" }));
+      onSent();
     } catch {
       setError("Couldn't send the request.");
     } finally {
@@ -218,8 +305,10 @@ function AddPanel() {
 export default function Friends() {
   const [friends, setFriends] = useState(null);
   const [friendsError, setFriendsError] = useState("");
-  const [requests, setRequests] = useState(null);
-  const [requestsError, setRequestsError] = useState("");
+  const [incoming, setIncoming] = useState(null);
+  const [incomingError, setIncomingError] = useState("");
+  const [sent, setSent] = useState(null);
+  const [sentError, setSentError] = useState("");
   const [busyRequestId, setBusyRequestId] = useState(null);
   const [tab, setTab] = useState("friends");
   const [manageEntry, setManageEntry] = useState(null);
@@ -234,29 +323,40 @@ export default function Friends() {
     }
   }, []);
 
-  const loadRequests = useCallback(async () => {
+  const loadIncoming = useCallback(async () => {
     try {
       const res = await client.get("/friendships/pending/");
-      setRequests(res.data);
-      setRequestsError("");
+      setIncoming(res.data);
+      setIncomingError("");
     } catch {
-      setRequestsError("Couldn't load requests.");
+      setIncomingError("Couldn't load requests.");
+    }
+  }, []);
+
+  const loadSent = useCallback(async () => {
+    try {
+      const res = await client.get("/friendships/sent/");
+      setSent(res.data);
+      setSentError("");
+    } catch {
+      setSentError("Couldn't load sent requests.");
     }
   }, []);
 
   useEffect(() => {
     loadFriends();
-    loadRequests();
-  }, [loadFriends, loadRequests]);
+    loadIncoming();
+    loadSent();
+  }, [loadFriends, loadIncoming, loadSent]);
 
   async function acceptRequest(request) {
     setBusyRequestId(request.id);
     try {
       await client.post(`/friendships/${request.id}/accept/`);
-      setRequests((rs) => rs.filter((r) => r.id !== request.id));
+      setIncoming((rs) => rs.filter((r) => r.id !== request.id));
       loadFriends();
     } catch {
-      setRequestsError("Couldn't accept the request.");
+      setIncomingError("Couldn't accept the request.");
     } finally {
       setBusyRequestId(null);
     }
@@ -266,9 +366,22 @@ export default function Friends() {
     setBusyRequestId(request.id);
     try {
       await client.post(`/friendships/${request.id}/reject/`);
-      setRequests((rs) => rs.filter((r) => r.id !== request.id));
+      setIncoming((rs) => rs.filter((r) => r.id !== request.id));
     } catch {
-      setRequestsError("Couldn't reject the request.");
+      setIncomingError("Couldn't reject the request.");
+    } finally {
+      setBusyRequestId(null);
+    }
+  }
+
+  async function cancelRequest(request) {
+    setBusyRequestId(request.id);
+    try {
+      await client.post(`/friendships/${request.id}/cancel/`);
+      setSent((rs) => rs.filter((r) => r.id !== request.id));
+      setSentError("");
+    } catch {
+      setSentError("Couldn't cancel the request.");
     } finally {
       setBusyRequestId(null);
     }
@@ -294,7 +407,9 @@ export default function Friends() {
         <div className="flex gap-1.5 border-b border-border">
           {[
             { key: "friends", label: "Friends", count: friends?.length },
-            { key: "requests", label: "Requests", count: requests?.length },
+            // Incoming only: a sent request is waiting on the other person,
+            // so counting it would overstate what needs your attention.
+            { key: "requests", label: "Requests", count: incoming?.length },
             { key: "add", label: "Add" },
           ].map((t) => (
             <button
@@ -347,15 +462,18 @@ export default function Friends() {
 
           {tab === "requests" && (
             <RequestsPanel
-              requests={requests}
-              error={requestsError}
+              incoming={incoming}
+              incomingError={incomingError}
+              sent={sent}
+              sentError={sentError}
               onAccept={acceptRequest}
               onReject={rejectRequest}
+              onCancel={cancelRequest}
               busyId={busyRequestId}
             />
           )}
 
-          {tab === "add" && <AddPanel />}
+          {tab === "add" && <AddPanel onSent={loadSent} />}
         </div>
       </div>
 

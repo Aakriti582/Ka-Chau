@@ -157,6 +157,31 @@ class FriendshipViewSet(viewsets.ModelViewSet):
             "existing_status": existing.status if existing else None,
         })
 
+    @action(detail=False, methods=["get"])
+    def sent(self, request):
+        qs = self.get_queryset().filter(
+            from_user=request.user, status=Friendship.Status.PENDING
+        )
+        return Response(FriendshipSerializer(qs, many=True).data)
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        friendship = self.get_object()
+
+        if friendship.from_user != request.user:
+            return Response(
+                {"detail": "Only the sender can cancel this request."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if friendship.status != Friendship.Status.PENDING:
+            return Response(
+                {"detail": f"Request is already {friendship.status}."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        friendship.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class LocationShareViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
