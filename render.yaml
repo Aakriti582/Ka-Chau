@@ -1,0 +1,23 @@
+databases:
+  - name: kachau-db
+    plan: free
+    postgresMajorVersion: "16"
+
+services:
+  - type: web
+    name: kachau-api
+    runtime: python
+    plan: free
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn config.wsgi:application"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kachau-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: PYTHON_VERSION
+        value: "3.12.3"

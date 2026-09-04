@@ -14,5 +14,4 @@ frontend/playwright-report/
 frontend/blob-report/
 frontend/playwright/.cache/
 frontend/dist/staticfiles/
-build.sh
-render.yaml
+
