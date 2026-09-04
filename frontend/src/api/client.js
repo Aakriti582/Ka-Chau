@@ -1,6 +1,9 @@
 import axios from "axios";
 
-const client = axios.create({ baseURL: "/api" });
+
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
+
+const client = axios.create({ baseURL: API_BASE });
 
 export const tokens = {
   get access() { return localStorage.getItem("kachau:access"); },
@@ -39,8 +42,8 @@ client.interceptors.response.use(
     original._retried = true;
 
     try {
-      refreshing = refreshing || axios.post("/api/auth/refresh/", {
-        refresh: tokens.refresh,
+      refreshing = refreshing || axios.post(`${API_BASE}/auth/refresh/`, {
+      refresh: tokens.refresh,
       });
       const { data } = await refreshing;
       refreshing = null;
@@ -56,3 +59,4 @@ client.interceptors.response.use(
 );
 
 export default client;
+
