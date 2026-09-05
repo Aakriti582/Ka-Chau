@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import client, { tokens } from "../api/client";
+import client, { signOut } from "../api/client";
 import BottomTabBar from "../components/BottomTabBar";
 import SharingSheet from "../components/SharingSheet";
 import { timeAgo } from "../utils/time";
@@ -289,11 +289,6 @@ export default function Me() {
       setShares((list) => (list ? list.filter((s) => s.viewer.id !== removed.user.id) : list));
     }
     setManageEntry(null);
-  }
-
-  function signOut() {
-    tokens.clear();
-    window.location.href = "/login";
   }
 
   return (

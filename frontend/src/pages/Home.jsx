@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import client, { tokens } from "../api/client";
+import client, { signOut } from "../api/client";
 import useLocationReporter from "../hooks/useLocationReporter";
 import FriendRow from "../components/FriendRow";
 import BottomTabBar from "../components/BottomTabBar";
@@ -48,7 +48,7 @@ export default function Home() {
         <header className="flex justify-between items-center mb-4">
           <h1 className="font-display font-medium text-3xl text-ink">Nearby</h1>
           <button
-            onClick={() => { tokens.clear(); window.location.href = "/login"; }}
+            onClick={signOut}
             className="text-sm text-ink-soft hover:text-forest"
           >
             Sign out

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import client, { tokens } from "../api/client";
 
-export default function Login() {
+export default function Login({ onSignedIn }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -15,7 +15,10 @@ export default function Login() {
     setBusy(true);
     try {
       const { data } = await client.post("/auth/login/", { username, password });
-      tokens.set(data.access, data.refresh);
+      // The refresh token came back as an httpOnly cookie; only the access
+      // token is ours to hold, and only in memory.
+      tokens.set(data.access);
+      onSignedIn?.();
       navigate("/");
     } catch (err) {
       setError(
