@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"\\\\\\\\\\\\\\\\wsl.localhost\\\\\\\\Ubuntu\\\\\\\\home\\\\\\\\aakriti_limbu\\\\\\\\projects\\\\\\\\ka-chau\" -type f -not -path \"*/node_modules/*\" -not -path \"*/.git/*\" -not -path \"*/__pycache__/*\" -not -path \"*/dist/*\" | head -100)",
+      "Read(///wsl.localhost/Ubuntu/home/aakriti_limbu/projects/**)"
+    ]
+  }
+}
