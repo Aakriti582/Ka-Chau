@@ -5,7 +5,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/Home";
 import Friends from "./pages/Friends";
-import MapPlaceholder from "./pages/MapPlaceholder";
+import MapScreen from "./pages/Map";
 import Me from "./pages/Me";
 
 function Protected({ authed, children }) {
@@ -36,7 +36,7 @@ export default function App() {
         <Route path="/register" element={<Register onSignedIn={() => setAuthed(true)} />} />
         <Route path="/" element={<Protected authed={authed}><Home /></Protected>} />
         <Route path="/friends" element={<Protected authed={authed}><Friends /></Protected>} />
-        <Route path="/map" element={<Protected authed={authed}><MapPlaceholder /></Protected>} />
+        <Route path="/map" element={<Protected authed={authed}><MapScreen /></Protected>} />
         <Route path="/me" element={<Protected authed={authed}><Me /></Protected>} />
       </Routes>
     </BrowserRouter>

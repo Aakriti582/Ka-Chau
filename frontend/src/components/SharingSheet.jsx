@@ -20,6 +20,25 @@ const PRECISION_OPTIONS = [
   },
 ];
 
+// What this friend currently lets ME see. Read-only here: this sheet writes
+// only the share in the other direction.
+const INCOMING_LABEL = {
+  exact: "Exact — their pin shows on your map.",
+  approx: "Approximate — distance only, rounded to about 100 m.",
+  proximity_only: "Proximity only — no coordinates, just how close they are.",
+};
+
+function incomingLine(share) {
+  if (share === undefined) return "Checking…";
+  if (share === "unknown") return "Couldn't check right now.";
+  if (!share) return "Nothing — they aren't sharing their location with you.";
+  if (share.is_paused) return "Paused by them — nothing visible to you right now.";
+  if (share.expires_at && new Date(share.expires_at) <= new Date()) {
+    return "Expired — nothing visible to you right now.";
+  }
+  return INCOMING_LABEL[share.precision] ?? "Sharing with you.";
+}
+
 function plusHourISO() {
   return new Date(Date.now() + 60 * 60 * 1000).toISOString();
 }
@@ -74,6 +93,29 @@ export default function SharingSheet({ entry, onClose, onShareChange, onRemoved 
     setConfirmingRemove(false);
     setCustomOpen(false);
   }, [entry?.friendship_id]);
+
+  // undefined = still checking, "unknown" = the request failed. Both are kept
+  // distinct from null, because reporting "not sharing with you" on a dropped
+  // request would be a false statement about someone's privacy.
+  const [theirShare, setTheirShare] = useState(undefined);
+
+  useEffect(() => {
+    if (!entry) return;
+    let cancelled = false;
+    setTheirShare(undefined);
+    client
+      .get("/shares/shared_with_me/")
+      .then((res) => {
+        if (cancelled) return;
+        setTheirShare(res.data.find((s) => s.owner.id === entry.user.id) ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setTheirShare("unknown");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [entry?.user.id]);
 
   if (!entry) return null;
 
@@ -152,9 +194,12 @@ export default function SharingSheet({ entry, onClose, onShareChange, onRemoved 
   }
 
   return (
-    <div className="fixed inset-0 z-50 font-body">
-      <div className="absolute inset-0 bg-[#1E2A20]/32" onClick={onClose} />
-      <div className="absolute left-0 right-0 bottom-0 bg-card rounded-t-[28px] px-5 pt-2.5 pb-6 max-h-[88%] overflow-auto shadow-[0_-8px_30px_rgba(30,42,32,.14)]">
+    // Leaflet's panes and controls run to z-index 800 and, because neither
+    // .kc-map nor .leaflet-container creates a stacking context, they compete
+    // in the root one. Anything below that paints under the map.
+    <div className="fixed inset-0 z-[2000] font-body">
+      <div className="absolute inset-0 z-0 bg-[#1E2A20]/32" onClick={onClose} />
+      <div className="absolute z-10 left-0 right-0 bottom-0 bg-card rounded-t-[28px] px-5 pt-2.5 pb-6 max-h-[88%] overflow-auto shadow-[0_-8px_30px_rgba(30,42,32,.14)]">
         <div className="w-11 h-1 rounded-full bg-border mx-auto mb-4" />
 
         <div className="flex items-center gap-3">
@@ -162,9 +207,19 @@ export default function SharingSheet({ entry, onClose, onShareChange, onRemoved 
             {name[0].toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="font-display text-2xl text-ink leading-tight">{name}</div>
+            <div className="text-[11px] tracking-[.14em] uppercase text-ink-soft">
+              You share with
+            </div>
+            <div className="font-display text-2xl text-ink leading-tight truncate">{name}</div>
             <div className="text-[12.5px] text-ink-soft">@{entry.user.username}</div>
           </div>
+        </div>
+
+        <div className="mt-3.5 px-4 py-3 border border-border rounded-[18px] bg-page">
+          <div className="text-[11px] tracking-[.14em] uppercase text-ink-soft mb-1">
+            They share with you
+          </div>
+          <div className="text-[13.5px] text-ink-soft">{incomingLine(theirShare)}</div>
         </div>
 
         {error && <p className="mt-3 text-sm text-danger">{error}</p>}

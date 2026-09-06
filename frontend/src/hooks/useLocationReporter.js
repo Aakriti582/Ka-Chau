@@ -6,6 +6,7 @@ const MIN_INTERVAL_MS = 60_000;
 export default function useLocationReporter(enabled = true) {
   const [status, setStatus] = useState("idle");
   const [lastSent, setLastSent] = useState(null);
+  const [coords, setCoords] = useState(null);
   const [error, setError] = useState("");
   const lastSentAt = useRef(0);
 
@@ -22,11 +23,14 @@ export default function useLocationReporter(enabled = true) {
 
     const watchId = navigator.geolocation.watchPosition(
       async (position) => {
+        const { latitude, longitude, accuracy } = position.coords;
+        // Exposed on every fix so the map can follow the user. Only the POST
+        // below is throttled -- rate-limiting the server, not the UI.
+        setCoords({ latitude, longitude, accuracy });
+
         const now = Date.now();
         if (now - lastSentAt.current < MIN_INTERVAL_MS) return;
         lastSentAt.current = now;
-
-        const { latitude, longitude, accuracy } = position.coords;
 
         try {
           await client.post("/locations/", {
@@ -58,5 +62,5 @@ export default function useLocationReporter(enabled = true) {
     return () => navigator.geolocation.clearWatch(watchId);
   }, [enabled]);
 
-  return { status, lastSent, error };
+  return { status, lastSent, error, coords };
 }
