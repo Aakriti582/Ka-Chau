@@ -8,6 +8,10 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from rest_framework import generics
 from .serializers import MeSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
+from .serializers import RegisterSerializer
+
+
 
 REFRESH_COOKIE = "kachau_refresh"
 
@@ -78,4 +82,20 @@ class LogoutView(APIView):
     def post(self, request):
         response = Response(status=status.HTTP_204_NO_CONTENT)
         response.delete_cookie(REFRESH_COOKIE, path="/api/auth/")
+        return response
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+    throttle_scope = "register"
+
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        refresh = RefreshToken.for_user(user)
+        response = Response(
+            {"access": str(refresh.access_token)},
+            status=status.HTTP_201_CREATED,
+        )
+        set_refresh_cookie(response, refresh)
         return response

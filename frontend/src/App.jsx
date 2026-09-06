@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { refreshAccess } from "./api/client";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Home from "./pages/Home";
 import Friends from "./pages/Friends";
 import MapPlaceholder from "./pages/MapPlaceholder";
@@ -32,6 +33,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login onSignedIn={() => setAuthed(true)} />} />
+        <Route path="/register" element={<Register onSignedIn={() => setAuthed(true)} />} />
         <Route path="/" element={<Protected authed={authed}><Home /></Protected>} />
         <Route path="/friends" element={<Protected authed={authed}><Friends /></Protected>} />
         <Route path="/map" element={<Protected authed={authed}><MapPlaceholder /></Protected>} />

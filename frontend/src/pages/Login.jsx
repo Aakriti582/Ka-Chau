@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import client, { tokens } from "../api/client";
 
 export default function Login({ onSignedIn }) {
@@ -81,6 +81,13 @@ export default function Login({ onSignedIn }) {
         >
           {busy ? "Signing in…" : "Sign in"}
         </button>
+
+        <p className="mt-5 text-center text-sm text-ink-soft">
+          New here?{" "}
+          <Link to="/register" className="text-forest border-b border-sage">
+            Create an account
+          </Link>
+        </p>
 
         <div className="mt-5 flex gap-2.5 items-start px-4 py-3.5 border border-border rounded-[14px]">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7CA982" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5">

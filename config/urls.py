@@ -22,9 +22,11 @@ from accounts.views import (
     CookieLoginView,
     CookieRefreshView,
     LogoutView,
+    RegisterView
 )
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/auth/register/", RegisterView.as_view()),
     path("api/auth/login/", CookieLoginView.as_view()),
     path("api/auth/refresh/", CookieRefreshView.as_view()),
     path("api/auth/logout/", LogoutView.as_view()),
