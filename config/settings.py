@@ -13,8 +13,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 from pathlib import Path
 from decouple import config
 import os
-
-
+import sys
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -172,7 +171,14 @@ REST_FRAMEWORK = {
 },
 }
 
+if "test" in sys.argv:
+    DATABASES["default"]["TEST"] = {"NAME": "test_kachau"}
 
+
+
+
+if "test" in sys.argv:
+    PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 from datetime import timedelta
 

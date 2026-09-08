@@ -1,25 +1,10 @@
 import { timeAgo } from "../utils/time";
+import { distanceLabel } from "../utils/distance";
 
 const PRECISION_BADGE = {
   approx: { label: "Approx", className: "border-teal text-[#5E7C7C]" },
   proximity_only: { label: "Proximity", className: "border-[#B9C3BA] border-dashed text-ink-soft" },
 };
-
-function distanceLabel(friend) {
-  if (friend.distance_m != null) {
-    return friend.distance_m < 1000
-      ? `${friend.distance_m} m away`
-      : `${(friend.distance_m / 1000).toFixed(1)} km away`;
-  }
-  if (friend.distance_bucket) {
-    return {
-      under_500m: "Very close",
-      under_1km: "Within 1 km",
-      under_2km: "Within 2 km",
-    }[friend.distance_bucket];
-  }
-  return "Nearby";
-}
 
 export default function FriendRow({ friend, stale = false }) {
   const name = friend.user.display_name || friend.user.username;

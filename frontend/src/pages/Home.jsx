@@ -3,6 +3,8 @@ import client, { signOut } from "../api/client";
 import useLocationReporter from "../hooks/useLocationReporter";
 import FriendRow from "../components/FriendRow";
 import BottomTabBar from "../components/BottomTabBar";
+import ArrivalToasts from "../components/ArrivalToasts";
+import useArrivalToasts from "../hooks/useArrivalToasts";
 import { timeAgo } from "../utils/time";
 
 const POLL_MS = 30_000;
@@ -12,6 +14,9 @@ export default function Home() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const { status, lastSent, error: locError } = useLocationReporter();
+
+  // Reads the same polled payload the list renders; it does not poll itself.
+  const { toasts, dismiss } = useArrivalToasts(data);
 
   const load = useCallback(async () => {
     try {
@@ -54,6 +59,8 @@ export default function Home() {
             Sign out
           </button>
         </header>
+
+        <ArrivalToasts toasts={toasts} onDismiss={dismiss} />
 
         <div
           className={`flex items-center gap-2.5 rounded-[18px] border px-4 py-3.5 mb-4 ${
