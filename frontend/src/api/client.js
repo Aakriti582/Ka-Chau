@@ -22,11 +22,13 @@ client.interceptors.request.use((config) => {
 
 let refreshing = null;
 
+const REFRESH_TIMEOUT_MS = 20_000;
+ 
 export async function refreshAccess() {
   refreshing = refreshing || axios.post(
     `${API_BASE}/auth/refresh/`,
     {},
-    { withCredentials: true }
+    { withCredentials: true, timeout: REFRESH_TIMEOUT_MS }
   );
   try {
     const { data } = await refreshing;

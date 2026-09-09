@@ -7,6 +7,8 @@ A friend proximity app that answers one question: **is my friend close to me rig
 Not a map you watch. Not a location history. Just the answer you'd otherwise phone someone to get.
 
 **Live:** [ka-chau.onrender.com](https://ka-chau.onrender.com) · **API:** [ka-chau-api.onrender.com](https://ka-chau-api.onrender.com)
+[![CI](https://github.com/Aakriti582/Ka-Chau/actions/workflows/ci.yml/badge.svg)](https://github.com/Aakriti582/Ka-Chau/actions/workflows/ci.yml)
+
 
 > Hosted on Render's free tier, which sleeps after 15 minutes of inactivity. The first request after a quiet period takes 30–60 seconds to wake the server. Location sharing needs HTTPS, which the deployed site has; `localhost` is the only exception browsers make.
 
@@ -309,6 +311,7 @@ Because the access token doesn't survive a page reload, the app performs a silen
 
 Signing out **must** call `POST /api/auth/logout/`. The client cannot delete an httpOnly cookie; only the server can. A client-only sign-out would leave a live credential in the browser, and the next page load would silently sign the user back in — on a shared computer, as the previous person.
 
+Boot has a hard timeout. If the refresh call neither resolves nor rejects — a hung request on a poor connection, or an in-app browser that silently drops it — the app falls through to the login screen after 25 seconds rather than holding its boot screen open indefinitely. An empty screen that never changes is indistinguishable from a crash, and on a free tier where the backend sleeps after 15 minutes of inactivity, slow first loads are normal rather than exceptional.
 ---
 
 ## Known limitations
