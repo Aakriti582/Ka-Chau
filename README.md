@@ -1,6 +1,6 @@
 # Ka Chau?
 
-**क छौ?** — Nepali for *"Where are you?"*
+Ka Chau — Nepali for *"Where are you?"*
 
 A friend proximity app that answers one question: **is my friend close to me right now?**
 
@@ -399,4 +399,4 @@ ka-chau/
 
 Aakriti Limbu — BSc IT, LBEF Campus / Asia Pacific University.
 
-Built in eleven days as a personal project. The build was documented daily; those logs are in `docs/` if you're curious how it went, including the parts that went badly.
+Built as a personal project. The build was documented daily; those logs are in `docs/` if you're curious how it went, including the parts that went badly.
